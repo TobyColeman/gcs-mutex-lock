@@ -1,0 +1,13 @@
+__tests__
+src
+.eslintrc
+.eslintignore
+.prettierignore
+.prettierrc
+jest.config.js
+tsconfig.json
+tsconfig.base.json
+tsconfig.build.json
+.gitcommitjsrc.yml
+.gitignore
+yarn-error.log
