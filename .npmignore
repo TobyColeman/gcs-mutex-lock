@@ -1,5 +1,6 @@
 __tests__
 src
+.env
 .eslintrc
 .eslintignore
 .prettierignore
@@ -11,3 +12,4 @@ tsconfig.build.json
 .gitcommitjsrc.yml
 .gitignore
 yarn-error.log
+service-account.json
