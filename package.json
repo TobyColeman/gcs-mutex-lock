@@ -3,12 +3,17 @@
   "version": "1.0.0",
   "description": "Simple, scalable, distributed mutex for serializing computations anywhere on the Internet.",
   "main": "dist/index.js",
-  "dependencies": {},
+  "dependencies": {
+    "@google-cloud/storage": "^5.1.2",
+    "promise-retry": "^2.0.1"
+  },
   "devDependencies": {
     "@types/jest": "^26.0.4",
     "@types/node": "12",
+    "@types/promise-retry": "^1.1.3",
     "@typescript-eslint/eslint-plugin": "^3.6.1",
     "@typescript-eslint/parser": "^3.6.1",
+    "dotenv": "^8.2.0",
     "eslint": "^7.4.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-jest": "^23.18.0",
@@ -20,7 +25,7 @@
     "typescript": "^3.9.7"
   },
   "scripts": {
-    "test": "jest",
+    "test": "jest --clearCache && jest --runInBand --testTimeout 10000",
     "build": "rm -rf ./dist && tsc --project tsconfig.build.json",
     "checkForUnpushedCommits": "[ \"$(git rev-list --count @{upstream}..HEAD)\" -eq 0 ] || (echo You have unpushed commits && exit 1)",
     "prepublishOnly": "npm run checkForUnpushedCommits && npm run build",
