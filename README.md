@@ -5,7 +5,7 @@ Simple, scalable, distributed mutex for serialising computations that is backed 
 ## Installation
 
 ```sh
-yarn add gcs-mux-lock
+yarn add gcs-mutex-lock
 ```
 
 ## Prerequisites
@@ -34,7 +34,7 @@ yarn add gcs-mux-lock
 ## Example Usage
 
 ```typescript
-import MutexLock from 'gcs-mux-lock'
+import MutexLock from 'gcs-mutex-lock'
 
 const lock = new MutexLock({
   /* @google-cloud/storage options for new Storage() */
@@ -43,27 +43,32 @@ const lock = new MutexLock({
   object: 'my-lock',
 })
 
-await lock.aquire()
+async function main() {
+  const { success, err } = await lock.acquire()
 
-try {
-  // serialised computation happens here.
-} finally {
-  lock.release()
+  // In most cases the lock is probably already acquired.
+  // The err is available for extra context.
+  if (!success) {
+    console.error('Failed to acquire lock', err)
+    return
+  }
+
+  try {
+    // serialised computation happens here.
+  } finally {
+    await lock.release()
+  }
 }
 ```
 
 ## Custom Timeouts
 
 ```typescript
-import MutexLock from 'gcs-mux-lock'
+import MutexLock from 'gcs-mutex-lock'
 
 const lock = new MutexLock({
-  timeoutOptions: {
-    forever: false,
-    minTimeout: 10,
-    maxTimeout: 1000,
-    retries: 10,
-  },
+  // wait up to 1 minute when trying to acquire a lock
+  timeout: 60_000,
 })
 ```
 
@@ -73,11 +78,11 @@ const lock = new MutexLock({
 
 ### `new Mutex(options: Object)`
 
-Creates a new Mutex lock. See [types](https://github.com/TobyColeman/gcs-mutex-lock/src/index.ts) for a complete set of options. By default `aquire` and `release` will wait indefinitely when trying to acquire or relinquish a lock. For convenience you can configure timeouts, backoff behaviour, retries etc.
+Creates a new Mutex lock. See [types](https://github.com/TobyColeman/gcs-mutex-lock/src/index.ts) for a complete set of options. By default `acquire` and `release` will wait indefinitely when trying to acquire or relinquish a lock. For convenience you can configure timeouts, backoff behaviour, retries etc.
 
-### `mutex.aquire()`
+### `mutex.acquire()`
 
-Returns a promise that will resolve as soon as the mutex is locked. If the lock is already in use then `aquire()` will wait until the mutex is available.
+Returns a promise that will resolve as soon as the mutex is locked. If the lock is already in use then `acquire()` will wait until the mutex is available.
 
 ### `mutex.release()`
 

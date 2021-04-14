@@ -17,17 +17,38 @@ describe('With the default configuration', () => {
     await cleanupBucket()
   })
 
-  test('Should aquire a lock', async () => {
-    return expect(lock.aquire()).resolves.toEqual(undefined)
+  test('Should acquire a lock', async () => {
+    return expect(lock.acquire()).resolves.toEqual({
+      success: true,
+      err: undefined,
+    })
   })
 
   test('Should release a lock', async () => {
-    await lock.aquire()
-    return expect(lock.release()).resolves.toEqual(undefined)
+    await lock.acquire()
+    return expect(lock.release()).resolves.toEqual({
+      success: true,
+      err: undefined,
+    })
   })
 
-  test('Should throw an error when trying to release a non-existent lock', async () => {
-    return expect(lock.release()).rejects.toThrow(/^Lock does not exist/)
+  describe('When locked', () => {
+    test('Should throw an error when trying to release a non-existent lock', async () => {
+      ;(lock as any)._isLocked = true
+      const { success, err } = await lock.release()
+
+      expect(success).toEqual(false)
+      expect(err).toBeDefined()
+    })
+  })
+
+  describe('When unlocked', () => {
+    test('Should do nothing when trying to release a non-existent lock', async () => {
+      return expect(lock.release()).resolves.toEqual({
+        success: true,
+        err: undefined,
+      })
+    })
   })
 })
 
@@ -36,12 +57,7 @@ describe('With custom configuration', () => {
     testConfig = provideTestConfig()
     lock = new MutexLock({
       ...testConfig.lockOptions,
-      timeoutOptions: {
-        forever: false,
-        minTimeout: 10,
-        maxTimeout: 100,
-        retries: 2,
-      },
+      timeout: 500,
     })
     await cleanupBucket()
   })
@@ -49,10 +65,13 @@ describe('With custom configuration', () => {
     await cleanupBucket()
   })
 
-  test('Should fail to aquire an already aquired lock after 1 retry', async () => {
-    // Not an amazing test, but trying to aquire an already aquired lock should not
+  test('Should fail to acquire an already acquired lock after 1 retry', async () => {
+    // Not an amazing test, but trying to acquire an already acquired lock should not
     // throw an exception
-    await lock.aquire()
-    return expect(lock.aquire()).rejects.toThrow('Precondition Failed')
+    await lock.acquire()
+    const { success, err } = await lock.acquire()
+    expect(success).toEqual(false)
+    expect(err).toBeDefined()
+    expect(err.message).toEqual('Precondition Failed')
   })
 })
