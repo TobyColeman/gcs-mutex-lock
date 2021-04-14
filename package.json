@@ -1,6 +1,6 @@
 {
   "name": "gcs-mutex-lock",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Simple, scalable, distributed mutex for serialising computations that is backed by GCS",
   "main": "dist/index.js",
   "dependencies": {
