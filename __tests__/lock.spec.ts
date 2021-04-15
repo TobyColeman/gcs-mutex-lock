@@ -35,6 +35,7 @@ describe('With the default configuration', () => {
   describe('When locked', () => {
     test('Should throw an error when trying to release a non-existent lock', async () => {
       ;(lock as any)._isLocked = true
+      ;(lock as any).timeout = 100
       const { success, err } = await lock.release()
 
       expect(success).toEqual(false)

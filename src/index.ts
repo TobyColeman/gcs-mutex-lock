@@ -19,13 +19,13 @@ export interface MutexLockOptions {
 export default class GcsMutexLock implements MutexLock {
   private _isLocked: boolean
   private storage: Storage
-  private timeoutOptions: {
-    forever?: boolean
-    retries?: number
-    minTimeout?: number
-    maxTimeout?: number
-    randomize?: boolean
+  private retryOptions: {
+    forever: boolean
+    minTimeout: number
+    maxTimeout: number
+    randomize: boolean
   }
+  private timeout: number
   private bucket: string
   private object: string
 
@@ -40,20 +40,15 @@ export default class GcsMutexLock implements MutexLock {
       autoRetry: false,
       maxRetries: 1,
     })
-    this.timeoutOptions = timeout
-      ? {
-          forever: false,
-          randomize: false,
-          retries: 1,
-          minTimeout: timeout,
-          maxTimeout: timeout,
-        }
-      : {
-          forever: true,
-          randomize: false,
-          minTimeout: 100, // 100ms
-          maxTimeout: 60_000, // 1 minute
-        }
+    this.retryOptions = {
+      // Open issue with setting a high number of retries -
+      // https://github.com/IndigoUnited/node-promise-retry/issues/20
+      forever: true,
+      randomize: false,
+      minTimeout: 100, // 100ms
+      maxTimeout: 5000, // 5 seconds
+    }
+    this.timeout = timeout || Infinity
     this.bucket = bucket
     this.object = object
     this._isLocked = false
@@ -64,14 +59,24 @@ export default class GcsMutexLock implements MutexLock {
   }
 
   async acquire(): Promise<MutexResult> {
+    const then = new Date().getTime()
+
     try {
       await promiseRetry(async (retry: (err: any) => void) => {
         await this.storage
           .bucket(this.bucket)
           .file(this.object, { generation: 0 })
           .save('', { resumable: false })
-          .catch(retry)
-      }, this.timeoutOptions)
+          .catch((err) => {
+            const now = new Date().getTime()
+
+            if (now - then >= this.timeout) {
+              throw err
+            }
+
+            retry(err)
+          })
+      }, this.retryOptions)
       this._isLocked = true
       return { success: true }
     } catch (err) {
@@ -83,6 +88,7 @@ export default class GcsMutexLock implements MutexLock {
     if (!this.isLocked) {
       return { success: true }
     }
+    const then = new Date().getTime()
 
     try {
       await promiseRetry(async (retry: (err: any) => void) => {
@@ -90,19 +96,16 @@ export default class GcsMutexLock implements MutexLock {
           .bucket(this.bucket)
           .file(this.object)
           .delete()
-          .catch((reason: any) => {
-            if (
-              reason &&
-              typeof reason === 'object' &&
-              reason.hasOwnProperty('message') &&
-              typeof reason.message === 'string' &&
-              reason.message.startsWith('No such object')
-            ) {
-              throw new Error('Lock does not exist')
+          .catch((err) => {
+            const now = new Date().getTime()
+
+            if (now - then >= this.timeout) {
+              throw err
             }
-            retry(reason)
+
+            retry(err)
           })
-      }, this.timeoutOptions)
+      }, this.retryOptions)
       this._isLocked = false
       return { success: true }
     } catch (err) {
