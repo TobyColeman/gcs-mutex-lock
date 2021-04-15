@@ -16,8 +16,6 @@ export interface MutexLockOptions {
   object: string
 }
 
-const DEFAULT_RETRY_INTERVAL = 5000 // 5 seconds
-
 export default class GcsMutexLock implements MutexLock {
   private _isLocked: boolean
   private storage: Storage
@@ -53,8 +51,8 @@ export default class GcsMutexLock implements MutexLock {
       : {
           forever: true,
           randomize: false,
-          minTimeout: timeout || DEFAULT_RETRY_INTERVAL,
-          maxTimeout: timeout || DEFAULT_RETRY_INTERVAL,
+          minTimeout: 100, // 100ms
+          maxTimeout: 60_000, // 1 minute
         }
     this.bucket = bucket
     this.object = object
